@@ -1,2 +1,3 @@
 # shipmarket
 buildsecure
+git init
