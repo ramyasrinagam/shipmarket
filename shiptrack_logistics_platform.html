@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShipTrack — Modern Logistics & Shipment Management</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff7ed',
+              100: '#ffedd5',
+              500: '#ff6b00',
+              600: '#ea580c',
+              700: '#c2410c',
+            },
+            slate: {
+              850: '#172033',
+              900: '#0f172a',
+              950: '#080d1a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Google Font Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card-hover:hover {
+      background: rgba(30, 41, 59, 0.9);
+      border-color: rgba(255, 107, 0, 0.3);
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    @keyframes pulse-subtle {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .animate-pulse-subtle { animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+  </style>
+</head>
+<body class="h-full flex flex-col bg-slate-950 text-slate-100 overflow-x-hidden selection:bg-brand-500 selection:text-white">
+
+  <script>
+    // Initial Default Seed Data
+    const DEFAULT_DRIVERS = [
+      { id: 'drv_1', name: 'Marcus Vance', phone: '+1 (555) 234-5678', vehicle: 'Van #402 (EV)', rating: 4.9, activeDeliveries: 2, status: 'Active' },
+      { id: 'drv_2', name: 'Elena Rostova', phone: '+1 (555) 876-5432', vehicle: 'Express Cargo #109', rating: 4.8, activeDeliveries: 1, status: 'Active' },
+      { id: 'drv_3', name: 'Derrick Miller', phone: '+1 (555) 345-6789', vehicle: 'E-Bike Courier #12', rating: 4.95, activeDeliveries: 0, status: 'On Break' }
+    ];
+
+    const DEFAULT_SHIPMENTS = [
+      {
+        id: 'ST-984210',
+        sender: { name: 'Alex Johnson', company: 'Apex Tech Inc.', phone: '+1 (555) 019-2831', address: '742 Evergreen Terrace, Springfield, IL' },
+        recipient: { name: 'Sarah Connor', company: 'Cyberdyne Systems', phone: '+1 (555) 912-8374', address: '100 Cyber Way, Los Angeles, CA' },
+        weightKg: 3.5,
+        dimensions: '30x20x15 cm',
+        serviceLevel: 'Express',
+        fragile: true,
+        cost: 42.50,
+        status: 'In Transit',
+        assignedDriverId: 'drv_1',
+        createdAt: '2026-10-03T09:30:00Z',
+        estimatedDelivery: '2026-10-06T17:00:00Z',
+        currentLocation: 'Distribution Hub - Denver, CO',
+        checkpointIndex: 2,
+        history: [
+          { status: 'Order Placed', timestamp: '2026-10-03T09:30:00Z', location: 'Springfield, IL', note: 'Shipment created and scheduled for pickup' },
+          { status: 'Picked Up', timestamp: '2026-10-03T14:15:00Z', location: 'Springfield Regional Hub', note: 'Collected by driver' },
+          { status: 'In Transit', timestamp: '2026-10-04T08:00:00Z', location: 'Denver Sorting Facility', note: 'Processed through automated sorter' }
+        ],
+        notes: 'Handle with extreme care - Glass optics inside.'
+      },
+      {
+        id: 'ST-882194',
+        sender: { name: 'Apex Logistics', company: 'Global Traders', phone: '+1 (555) 333-2211', address: '12 Freight Way, Newark, NJ' },
+        recipient: { name: 'Alex Johnson', company: 'Home Office', phone: '+1 (555) 019-2831', address: '742 Evergreen Terrace, Springfield, IL' },
+        weightKg: 1.2,
+        dimensions: '15x10x5 cm',
+        serviceLevel: 'Same-day Priority',
+        fragile: false,
+        cost: 65.00,
+        status: 'Out for Delivery',
+        assignedDriverId: 'drv_1',
+        createdAt: '2026-10-05T06:00:00Z',
+        estimatedDelivery: '2026-10-05T18:00:00Z',
+        currentLocation: 'Local Dispatch - Springfield, IL (Van #402)',
+        checkpointIndex: 3,
+        history: [
+          { status: 'Order Placed', timestamp: '2026-10-05T06:00:00Z', location: 'Newark, NJ', note: 'Express order logged' },
+          { status: 'Picked Up', timestamp: '2026-10-05T07:30:00Z', location: 'Newark Air Terminal', note: 'Loaded on flight ST-40' },
+          { status: 'In Transit', timestamp: '2026-10-05T10:15:00Z', location: 'Springfield Depot', note: 'Arrival scanned' },
+          { status: 'Out for Delivery', timestamp: '2026-10-05T11:45:00Z', location: 'Springfield Sector 4', note: 'Loaded on Marcus Vance delivery route' }
+        ],
+        notes: 'Call customer 10 mins prior to arrival.'
+      },
+      {
+        id: 'ST-773012',
+        sender: { name: 'Samantha Vance', company: 'DesignCraft Studio', phone: '+1 (555) 444-9988', address: '88 Art District, Seattle, WA' },
+        recipient: { name: 'Marcus Vance', company: 'Private Residence', phone: '+1 (555) 234-5678', address: '45 Lake View Dr, Seattle, WA' },
+        weightKg: 8.0,
+        dimensions: '50x50x40 cm',
+        serviceLevel: 'Standard',
+        fragile: true,
+        cost: 28.00,
+        status: 'Delivered',
+        assignedDriverId: 'drv_2',
+        createdAt: '2026-10-01T10:00:00Z',
+        estimatedDelivery: '2026-10-04T15:00:00Z',
+        currentLocation: 'Recipient Front Door',
+        checkpointIndex: 4,
+        proofOfDelivery: {
+          otp: '4920',
+          signedBy: 'M. Vance',
+          notes: 'Left safely on front porch behind pillar.',
+          photoSimulated: true
+        },
+        history: [
+          { status: 'Order Placed', timestamp: '2026-10-01T10:00:00Z', location: 'Seattle, WA', note: 'Order created' },
+          { status: 'Picked Up', timestamp: '2026-10-01T16:20:00Z', location: 'Seattle Central Depot', note: 'Scanned in' },
+          { status: 'In Transit', timestamp: '2026-10-02T11:00:00Z', location: 'Seattle South Hub', note: 'Sorting completed' },
+          { status: 'Out for Delivery', timestamp: '2026-10-04T08:30:00Z', location: 'Seattle Metro', note: 'With courier Elena Rostova' },
+          { status: 'Delivered', timestamp: '2026-10-04T14:10:00Z', location: 'Seattle Front Door', note: 'Delivered and verified with OTP 4920' }
+        ],
+        notes: 'Heavy box.'
+      },
+      {
+        id: 'ST-651099',
+        sender: { name: 'BioHealth Labs', company: 'BioHealth', phone: '+1 (555) 777-1122', address: '500 Science Park, Boston, MA' },
+        recipient: { name: 'City Hospital Pharmacy', company: 'General Medical', phone: '+1 (555) 888-3344', address: '12 Medical Plaza, Chicago, IL' },
+        weightKg: 2.0,
+        dimensions: '25x25x20 cm',
+        serviceLevel: 'Express',
+        fragile: true,
+        cost: 55.00,
+        status: 'Order Placed',
+        assignedDriverId: null,
+        createdAt: '2026-10-05T11:30:00Z',
+        estimatedDelivery: '2026-10-07T12:00:00Z',
+        currentLocation: 'Awaiting Pickup - Boston Lab Center',
+        checkpointIndex: 0,
+        history: [
+          { status: 'Order Placed', timestamp: '2026-10-05T11:30:00Z', location: 'Boston, MA', note: 'Shipment created by sender' }
+        ],
+        notes: 'Temperature sensitive materials.'
+      }
+    ];
+
+    // LocalStorage State Management
+    function loadState() {
+      const savedShipments = localStorage.getItem('shiptrack_shipments');
+      const savedDrivers = localStorage.getItem('shiptrack_drivers');
+      return {
+        shipments: savedShipments ? JSON.parse(savedShipments) : DEFAULT_SHIPMENTS,
+        drivers: savedDrivers ? JSON.parse(savedDrivers) : DEFAULT_DRIVERS
+      };
+    }
+
+    let state = loadState();
+
+    function saveState() {
+      localStorage.setItem('shiptrack_shipments', JSON.stringify(state.shipments));
+      localStorage.setItem('shiptrack_drivers', JSON.stringify(state.drivers));
+    }
+
+    // App Navigation & Role Context
+    let currentRole = 'customer'; // 'customer' | 'driver' | 'admin'
+    let activeCustomerTab = 'tracking'; // 'tracking' | 'create' | 'history'
+    let selectedTrackingId = 'ST-984210';
+    let driverFilter = 'all';
+
+    function setRole(role) {
+      currentRole = role;
+      renderApp();
+    }
+
+    function generateTrackingId() {
+      return 'ST-' + Math.floor(100000 + Math.random() * 900000);
+    }
+
+    // Helper functions for statuses
+    const STATUS_STAGES = ['Order Placed', 'Picked Up', 'In Transit', 'Out for Delivery', 'Delivered'];
+
+    function getStatusBadgeClass(status) {
+      switch(status) {
+        case 'Delivered': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+        case 'Out for Delivery': return 'bg-brand-500/10 text-brand-400 border-brand-500/30 animate-pulse-subtle';
+        case 'In Transit': return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+        case 'Picked Up': return 'bg-purple-500/10 text-purple-400 border-purple-500/30';
+        case 'Failed Attempt': return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+        default: return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+      }
+    }
+
+    function formatDate(isoString) {
+      if(!isoString) return 'N/A';
+      const d = new Date(isoString);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    }
+  </script>
+
+  <header class="sticky top-0 z-40 bg-slate-900/90 backdrop-blur-md border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <!-- Logo -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="setRole('customer')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-amber-500 flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-black text-xl">
+          <i class="ph-bold ph-truck"></i>
+        </div>
+        <div>
+          <span class="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+            Ship<span class="text-brand-500">Track</span>
+            <span class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 border border-brand-500/20">Enterprise</span>
+          </span>
+          <p class="text-[11px] text-slate-400 hidden sm:block">Real-time Logistics & Fleet Intelligence</p>
+        </div>
+      </div>
+
+      <!-- Role Switcher -->
+      <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button id="btn-role-customer" onclick="setRole('customer')" 
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+          <i class="ph-bold ph-user"></i>
+          <span class="hidden sm:inline">Customer Portal</span>
+          <span class="sm:hidden">Customer</span>
+        </button>
+
+        <button id="btn-role-driver" onclick="setRole('driver')" 
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+          <i class="ph-bold ph-steering-wheel"></i>
+          <span class="hidden sm:inline">Driver App</span>
+          <span class="sm:hidden">Driver</span>
+        </button>
+
+        <button id="btn-role-admin" onclick="setRole('admin')" 
+          class="px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+          <i class="ph-bold ph-chart-pie-slice"></i>
+          <span class="hidden sm:inline">Admin Desk</span>
+          <span class="sm:hidden">Admin</span>
+        </button>
+      </div>
+
+      <!-- Active User Profile Summary -->
+      <div class="hidden lg:flex items-center gap-3 pl-3 border-l border-slate-800">
+        <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-300 font-bold text-xs border border-slate-700" id="user-avatar-initials">
+          AJ
+        </div>
+        <div class="text-xs">
+          <div class="font-semibold text-slate-200" id="user-name-display">Alex Johnson</div>
+          <div class="text-slate-400 text-[10px]" id="user-role-subtitle">Customer Account</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    
+    <!-- CUSTOMER VIEW -->
+    <div id="view-customer" class="space-y-6 hidden">
+      <!-- Sub-nav for Customer -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4 flex-wrap gap-4">
+        <div class="flex items-center gap-2 bg-slate-900 p-1 rounded-xl border border-slate-800">
+          <button onclick="setCustomerTab('tracking')" id="tab-cust-tracking" class="px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+            <i class="ph-bold ph-magnifying-glass"></i> Live Track
+          </button>
+          <button onclick="setCustomerTab('create')" id="tab-cust-create" class="px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+            <i class="ph-bold ph-plus-circle"></i> Create Shipment
+          </button>
+          <button onclick="setCustomerTab('history')" id="tab-cust-history" class="px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2">
+            <i class="ph-bold ph-clock-counter-clockwise"></i> My Shipments
+          </button>
+        </div>
+
+        <!-- Quick Track Input Bar -->
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <div class="relative flex-1 sm:w-64">
+            <i class="ph ph-barcode absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+            <input type="text" id="cust-quick-track-input" placeholder="e.g. ST-984210" 
+              class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-brand-500 text-slate-100 placeholder-slate-500 uppercase">
+          </div>
+          <button onclick="trackFromInput()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-semibold transition-all shadow-md shadow-brand-500/20 flex items-center gap-1.5">
+            Track
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Content 1: Live Tracking View -->
+      <div id="cust-sub-tracking" class="space-y-6">
+        <!-- Live Tracking Detail Header -->
+        <div id="tracking-card-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Create Shipment Form -->
+      <div id="cust-sub-create" class="hidden">
+        <div class="glass-card rounded-2xl p-6 sm:p-8 max-w-4xl mx-auto border border-slate-800 space-y-6 shadow-2xl">
+          <div class="border-b border-slate-800 pb-4">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <i class="ph-duotone ph-package text-brand-500 text-2xl"></i> Dispatch New Shipment
+            </h2>
+            <p class="text-xs text-slate-400 mt-1">Fill in recipient and parcel metrics to calculate instant rate and generate tracking ID.</p>
+          </div>
+
+          <form id="create-shipment-form" onsubmit="handleCreateShipment(event)" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <!-- Sender Details -->
+              <div class="space-y-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400 flex items-center gap-2">
+                  <i class="ph-bold ph-paper-plane-tilt"></i> Origin & Sender Info
+                </h3>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Sender Name</label>
+                  <input type="text" id="ship-sender-name" value="Alex Johnson" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Company / Dept (Optional)</label>
+                  <input type="text" id="ship-sender-comp" value="Apex Tech Inc." class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Pickup Address</label>
+                  <textarea id="ship-sender-addr" rows="2" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">742 Evergreen Terrace, Springfield, IL</textarea>
+                </div>
+              </div>
+
+              <!-- Recipient Details -->
+              <div class="space-y-4 bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400 flex items-center gap-2">
+                  <i class="ph-bold ph-map-pin"></i> Destination & Recipient
+                </h3>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Recipient Name</label>
+                  <input type="text" id="ship-recip-name" placeholder="e.g. Maria Garcia" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Company (Optional)</label>
+                  <input type="text" id="ship-recip-comp" placeholder="e.g. Nexus Logistics" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Delivery Address</label>
+                  <textarea id="ship-recip-addr" rows="2" placeholder="Street, City, State, ZIP" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200"></textarea>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Parcel Specs & Rate Estimator -->
+            <div class="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-4">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-brand-400 flex items-center gap-2">
+                <i class="ph-bold ph-scales"></i> Package Metrics & Delivery Speed
+              </h3>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Weight (kg)</label>
+                  <input type="number" step="0.1" id="ship-weight" value="2.5" oninput="calculateRate()" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Dimensions (LxWxH cm)</label>
+                  <input type="text" id="ship-dim" value="25x20x15" required class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 mb-1">Delivery Speed</label>
+                  <select id="ship-speed" onchange="calculateRate()" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-brand-500 focus:outline-none text-slate-200">
+                    <option value="Standard">Standard Ground (3-5 Days)</option>
+                    <option value="Express" selected>Express Air (1-2 Days)</option>
+                    <option value="Same-day Priority">Same-day Priority (12 Hours)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+                <label class="inline-flex items-center gap-2 cursor-pointer text-xs text-slate-300">
+                  <input type="checkbox" id="ship-fragile" class="rounded bg-slate-950 border-slate-800 text-brand-500 focus:ring-0">
+                  <span>Fragile / Sensitive Handle ($5.00 surcharge)</span>
+                </label>
+
+                <!-- Live Calculated Cost -->
+                <div class="text-right">
+                  <div class="text-[10px] text-slate-400 uppercase tracking-wider">Estimated Shipping Fee</div>
+                  <div class="text-2xl font-black text-brand-400" id="estimated-cost-display">$32.50</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2">
+              <button type="button" onclick="setCustomerTab('tracking')" class="px-5 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-xs text-slate-300 font-medium">Cancel</button>
+              <button type="submit" class="px-6 py-2.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-all shadow-lg shadow-brand-500/25 flex items-center gap-2">
+                <i class="ph-bold ph-check"></i> Generate Booking & Pay
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tab Content 3: Shipment History View -->
+      <div id="cust-sub-history" class="hidden space-y-4">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="ph-bold ph-clock-counter-clockwise text-brand-500"></i> My Dispatch History
+          </h2>
+          <div class="flex items-center gap-2">
+            <input type="text" id="cust-history-search" onkeyup="renderCustomerHistory()" placeholder="Search by recipient or ID..." class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500 w-60">
+          </div>
+        </div>
+
+        <div id="cust-history-table-container">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- DELIVERY PERSONNEL VIEW -->
+    <div id="view-driver" class="space-y-6 hidden">
+      <!-- Driver Top Switcher/Info Bar -->
+      <div class="glass-card rounded-2xl p-5 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-2xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 text-2xl font-bold">
+            <i class="ph-bold ph-steering-wheel"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-lg font-bold text-white" id="driver-app-name-display">Marcus Vance</h2>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold">On Duty</span>
+            </div>
+            <p class="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+              <span><i class="ph-bold ph-truck text-brand-500"></i> Van #402 (EV)</span>
+              <span>•</span>
+              <span><i class="ph-bold ph-star text-amber-400"></i> 4.9 Rating</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- Driver Switch dropdown for multi-driver testing -->
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-slate-400">Switch Driver Agent:</label>
+          <select id="active-driver-select" onchange="switchDriverContext(this.value)" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-brand-500">
+            <!-- JS populated -->
+          </select>
+        </div>
+      </div>
+
+      <!-- Driver Tasks Route Board -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Assigned Active Shipments Queue -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+              <i class="ph-bold ph-list-checks text-brand-500"></i> Assigned Delivery Manifest
+            </h3>
+            <span class="text-xs text-slate-400" id="driver-task-count">0 tasks assigned</span>
+          </div>
+
+          <div id="driver-shipments-list" class="space-y-4">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Today's Route Summary Checklist -->
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="ph-bold ph-map-trifold text-brand-500"></i> Route Optimizing Guide
+          </h3>
+          <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4 text-xs">
+            <div class="p-3 rounded-xl bg-brand-500/10 border border-brand-500/20 text-brand-300">
+              <i class="ph-bold ph-info mr-1"></i> Sequence sorted by priority & optimized GPS dropoffs.
+            </div>
+
+            <div class="space-y-3" id="driver-route-checklist">
+              <!-- Rendered via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ADMINISTRATOR VIEW -->
+    <div id="view-admin" class="space-y-6 hidden">
+      <!-- Admin Top Analytics KPIs -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="admin-kpi-container">
+        <!-- Rendered via JS -->
+      </div>
+
+      <!-- Main Fleet Control Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Driver Fleet Roster -->
+        <div class="glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="ph-bold ph-users text-brand-500"></i> Active Drivers Roster
+            </h3>
+            <button onclick="openAddDriverModal()" class="text-[11px] px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg transition-all">+ Add Courier</button>
+          </div>
+          <div id="admin-driver-roster" class="space-y-3">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+
+        <!-- Shipment Master Management Desk -->
+        <div class="lg:col-span-2 glass-card rounded-2xl p-5 border border-slate-800 space-y-4">
+          <div class="flex items-center justify-between flex-wrap gap-3 border-b border-slate-800 pb-3">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="ph-bold ph-database text-brand-500"></i> Global Master Shipments Table
+            </h3>
+            <div class="flex items-center gap-2">
+              <select id="admin-filter-status" onchange="renderAdminMasterTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none">
+                <option value="ALL">All Statuses</option>
+                <option value="Order Placed">Order Placed</option>
+                <option value="In Transit">In Transit</option>
+                <option value="Out for Delivery">Out for Delivery</option>
+                <option value="Delivered">Delivered</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="admin-master-table-container" class="overflow-x-auto">
+            <!-- Rendered via JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- AI ASSISTANT FLOATING CHAT BOT -->
+  <div class="fixed bottom-5 right-5 z-50">
+    <!-- Collapsed Toggle Button -->
+    <button id="ai-toggle-btn" onclick="toggleAIChat()" 
+      class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 to-amber-500 text-white flex items-center justify-center shadow-2xl shadow-brand-500/40 hover:scale-105 active:scale-95 transition-all group relative">
+      <i class="ph-bold ph-robot text-2xl"></i>
+      <span class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-slate-950"></span>
+    </button>
+
+    <!-- Expanded AI Chat Window -->
+    <div id="ai-chat-window" class="hidden fixed bottom-20 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 h-[500px] glass-card rounded-2xl border border-slate-700/80 shadow-2xl flex flex-col overflow-hidden transition-all z-50">
+      
+      <!-- AI Header -->
+      <div class="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center text-xl">
+            <i class="ph-bold ph-robot"></i>
+          </div>
+          <div>
+            <h3 class="text-xs font-bold text-white flex items-center gap-1.5">
+              ShipTrack AI Assistant
+              <span class="text-[9px] bg-brand-500/20 text-brand-300 px-1.5 py-0.2 rounded font-mono">Gemini 3 Flash</span>
+            </h3>
+            <p class="text-[10px] text-slate-400">Ask about tracking, delays, rates, or driver stats</p>
+          </div>
+        </div>
+        <button onclick="toggleAIChat()" class="text-slate-400 hover:text-white p-1">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Chat Messages Scroll Container -->
+      <div id="ai-chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+        <!-- Default Assistant Greeting -->
+        <div class="flex gap-2.5">
+          <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center flex-shrink-0 text-xs">
+            <i class="ph-bold ph-robot"></i>
+          </div>
+          <div class="bg-slate-800/80 p-3 rounded-2xl rounded-tl-none border border-slate-700 text-slate-200 leading-relaxed">
+            Hello! I'm your ShipTrack AI. Ask me anything about current shipments (e.g., <i>"Where is ST-984210?"</i> or <i>"How many deliveries are out today?"</i>)!
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Suggestion Pills -->
+      <div class="px-3 py-2 bg-slate-900/50 border-t border-slate-800/80 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-[11px]">
+        <button onclick="askAIQuick('Where is ST-984210?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap border border-slate-700">📍 ST-984210 Status</button>
+        <button onclick="askAIQuick('Summarize active fleet status')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 whitespace-nowrap border border-slate-700">📊 Fleet Summary</button>
+      </div>
+
+      <!-- Chat Input Area -->
+      <form onsubmit="handleAISubmit(event)" class="p-3 bg-slate-900 border-t border-slate-800 flex items-center gap-2">
+        <input type="text" id="ai-input-text" placeholder="Type query about shipments..." 
+          class="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-500 text-slate-100 placeholder-slate-500">
+        <button type="submit" class="w-9 h-9 rounded-xl bg-brand-500 hover:bg-brand-600 text-white flex items-center justify-center transition-all flex-shrink-0">
+          <i class="ph-bold ph-paper-plane-right"></i>
+        </button>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- MODAL: Update Delivery Status & Proof (For Drivers/Admin) -->
+  <div id="modal-update-status" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl border border-slate-800 p-6 max-w-md w-full space-y-5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-sm flex items-center gap-2">
+          <i class="ph-bold ph-arrow-circle-up text-brand-500"></i> Update Shipment Status
+        </h3>
+        <button onclick="closeStatusModal()" class="text-slate-400 hover:text-white"><i class="ph-bold ph-x"></i></button>
+      </div>
+
+      <form onsubmit="saveStatusUpdate(event)" class="space-y-4">
+        <input type="hidden" id="modal-shipment-id">
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Select New Status</label>
+          <select id="modal-status-select" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:border-brand-500 focus:outline-none">
+            <option value="Order Placed">Order Placed</option>
+            <option value="Picked Up">Picked Up</option>
+            <option value="In Transit">In Transit</option>
+            <option value="Out for Delivery">Out for Delivery</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Failed Attempt">Failed Attempt</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Current GPS / Hub Location</label>
+          <input type="text" id="modal-location-input" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:border-brand-500 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Status Note / Driver Comments</label>
+          <textarea id="modal-notes-input" rows="2" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 focus:border-brand-500 focus:outline-none" placeholder="e.g. Scanned into sorting facility or left with front desk"></textarea>
+        </div>
+
+        <!-- Extra POD Fields if Status is Delivered -->
+        <div id="pod-extra-fields" class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-3">
+          <div class="text-[11px] font-bold text-brand-400 uppercase tracking-wider">Proof of Delivery (POD)</div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400">Customer OTP Verification</label>
+              <input type="text" id="modal-otp-input" placeholder="e.g. 8492" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400">Signed By</label>
+              <input type="text" id="modal-signedby-input" placeholder="Name" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-slate-200">
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeStatusModal()" class="px-4 py-2 rounded-xl border border-slate-800 text-xs text-slate-300">Cancel</button>
+          <button type="submit" class="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs transition-all shadow-md">
+            Save Status Log
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Downloadable Invoice Summary Modal -->
+  <div id="modal-invoice" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-card bg-slate-900 rounded-2xl border border-slate-800 p-6 max-w-lg w-full space-y-6 shadow-2xl text-slate-200">
+      <div id="invoice-modal-content">
+        <!-- Rendered via JS -->
+      </div>
+      <div class="flex justify-between items-center border-t border-slate-800 pt-4">
+        <span class="text-xs text-slate-500">ShipTrack Shipping Receipt</span>
+        <div class="flex gap-2">
+          <button onclick="closeInvoiceModal()" class="px-4 py-2 rounded-xl border border-slate-800 text-xs hover:bg-slate-800">Close</button>
+          <button onclick="simulatePrintInvoice()" class="px-4 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md">
+            <i class="ph-bold ph-printer"></i> Print Receipt
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- MAIN RENDER ROUTINER ---
+    function renderApp() {
+      // Role Buttons Styling
+      ['customer', 'driver', 'admin'].forEach(r => {
+        const btn = document.getElementById(`btn-role-${r}`);
+        if(r === currentRole) {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 bg-brand-500 text-white shadow-md shadow-brand-500/20';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 text-slate-400 hover:text-white hover:bg-slate-900';
+        }
+      });
+
+      // Role Headers Updates
+      const nameDisp = document.getElementById('user-name-display');
+      const subDisp = document.getElementById('user-role-subtitle');
+      const avatarDisp = document.getElementById('user-avatar-initials');
+
+      if(currentRole === 'customer') {
+        nameDisp.innerText = 'Alex Johnson';
+        subDisp.innerText = 'Customer Account';
+        avatarDisp.innerText = 'AJ';
+      } else if(currentRole === 'driver') {
+        nameDisp.innerText = 'Marcus Vance';
+        subDisp.innerText = 'Delivery Personnel';
+        avatarDisp.innerText = 'MV';
+      } else {
+        nameDisp.innerText = 'Enterprise Admin';
+        subDisp.innerText = 'Logistics Control';
+        avatarDisp.innerText = 'EA';
+      }
+
+      // Hide all main view sections
+      document.getElementById('view-customer').classList.add('hidden');
+      document.getElementById('view-driver').classList.add('hidden');
+      document.getElementById('view-admin').classList.add('hidden');
+
+      // Unhide active role section
+      if(currentRole === 'customer') {
+        document.getElementById('view-customer').classList.remove('hidden');
+        renderCustomerView();
+      } else if(currentRole === 'driver') {
+        document.getElementById('view-driver').classList.remove('hidden');
+        renderDriverView();
+      } else if(currentRole === 'admin') {
+        document.getElementById('view-admin').classList.remove('hidden');
+        renderAdminView();
+      }
+    }
+
+    // --- CUSTOMER PORTAL LOGIC ---
+    function setCustomerTab(tab) {
+      activeCustomerTab = tab;
+      renderCustomerView();
+    }
+
+    function renderCustomerView() {
+      ['tracking', 'create', 'history'].forEach(t => {
+        const btn = document.getElementById(`tab-cust-${t}`);
+        const sec = document.getElementById(`cust-sub-${t}`);
+        if(t === activeCustomerTab) {
+          btn.className = 'px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 bg-brand-500/20 text-brand-300 border border-brand-500/30';
+          sec.classList.remove('hidden');
+        } else {
+          btn.className = 'px-4 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50';
+          sec.classList.add('hidden');
+        }
+      });
+
+      if(activeCustomerTab === 'tracking') {
+        renderLiveTrackingCard();
+      } else if(activeCustomerTab === 'history') {
+        renderCustomerHistory();
+      }
+    }
+
+    function trackFromInput() {
+      const val = document.getElementById('cust-quick-track-input').value.trim().toUpperCase();
+      if(!val) return;
+      const found = state.shipments.find(s => s.id === val);
+      if(found) {
+        selectedTrackingId = val;
+        setCustomerTab('tracking');
+      } else {
+        alertModal(`No shipment found matching tracking number "${val}". Try ST-984210 or ST-882194.`);
+      }
+    }
+
+    function renderLiveTrackingCard() {
+      const container = document.getElementById('tracking-card-container');
+      const item = state.shipments.find(s => s.id === selectedTrackingId) || state.shipments[0];
+
+      if(!item) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400">No shipments loaded.</div>`;
+        return;
+      }
+
+      // Checkpoint progress calculation
+      const activeStageIdx = item.checkpointIndex >= 0 ? item.checkpointIndex : 0;
+
+      container.innerHTML = `
+        <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-2xl">
+          
+          <!-- Top Info Banner -->
+          <div class="p-6 bg-slate-900/90 border-b border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="text-2xl font-black text-white tracking-tight">${item.id}</span>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold border ${getStatusBadgeClass(item.status)}">
+                  ${item.status}
+                </span>
+                <span class="text-xs px-2.5 py-0.5 rounded-md bg-slate-800 text-slate-300 border border-slate-700 font-medium">
+                  ${item.serviceLevel}
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1 flex items-center gap-3">
+                <span>Sender: <strong class="text-slate-200">${item.sender.name}</strong></span>
+                <span>•</span>
+                <span>Recipient: <strong class="text-slate-200">${item.recipient.name}</strong></span>
+              </p>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <button onclick="openInvoiceModal('${item.id}')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-700 flex items-center gap-2">
+                <i class="ph-bold ph-receipt"></i> Invoice
+              </button>
+            </div>
+          </div>
+
+          <!-- Tracking Stepper Timeline -->
+          <div class="p-6 sm:p-8 space-y-8 bg-slate-900/40">
+            <div class="space-y-2">
+              <div class="flex justify-between text-xs text-slate-400 mb-2">
+                <span>Current Checkpoint: <strong class="text-brand-400">${item.currentLocation}</strong></span>
+                <span>Est. Delivery: <strong class="text-slate-200">${formatDate(item.estimatedDelivery)}</strong></span>
+              </div>
+
+              <!-- Visual Stepper Progress Bar -->
+              <div class="relative flex items-center justify-between">
+                <!-- Background Line -->
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-800 z-0"></div>
+                <!-- Active Line -->
+                <div class="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-brand-600 to-amber-500 z-0 transition-all duration-500"
+                     style="width: ${(activeStageIdx / (STATUS_STAGES.length - 1)) * 100}%"></div>
+
+                ${STATUS_STAGES.map((stage, idx) => {
+                  const isDone = idx <= activeStageIdx;
+                  const isCurrent = idx === activeStageIdx;
+                  return `
+                    <div class="relative z-10 flex flex-col items-center group">
+                      <div class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+                        isCurrent 
+                          ? 'bg-brand-500 text-white ring-4 ring-brand-500/20 scale-110 shadow-lg shadow-brand-500/40' 
+                          : isDone 
+                            ? 'bg-brand-600 text-white' 
+                            : 'bg-slate-800 text-slate-500 border border-slate-700'
+                      }">
+                        ${isDone ? '<i class="ph-bold ph-check"></i>' : idx + 1}
+                      </div>
+                      <span class="absolute top-12 text-[11px] font-medium whitespace-nowrap hidden sm:block ${
+                        isCurrent ? 'text-brand-400 font-bold' : isDone ? 'text-slate-300' : 'text-slate-600'
+                      }">
+                        ${stage}
+                      </span>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+
+            <!-- Simulated Interactive GPS Map & Event Logs Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6">
+              
+              <!-- Simulated Interactive GPS Visualizer -->
+              <div class="lg:col-span-2 bg-slate-950 rounded-2xl border border-slate-800 p-4 relative overflow-hidden flex flex-col justify-between min-h-[260px]">
+                <!-- Grid backdrop pattern -->
+                <div class="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-30"></div>
+                
+                <div class="relative z-10 flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-lg border border-slate-800 text-slate-300">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                    <span>Live GPS Telemetry Simulation</span>
+                  </div>
+                  <span class="text-[10px] text-slate-500 font-mono">LAT: 39.7392° N, LON: 104.9903° W</span>
+                </div>
+
+                <!-- GPS Dynamic Visual Centerpiece -->
+                <div class="relative z-10 py-8 flex flex-col items-center justify-center text-center space-y-3">
+                  <div class="w-16 h-16 rounded-full bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400 text-3xl shadow-2xl shadow-brand-500/20 animate-pulse">
+                    <i class="ph-bold ph-truck"></i>
+                  </div>
+                  <div>
+                    <div class="text-xs font-bold text-slate-200">${item.currentLocation}</div>
+                    <div class="text-[11px] text-slate-400 mt-0.5">Carrier Vehicle: Van #402 • Speed: 52 mph</div>
+                  </div>
+                </div>
+
+                <!-- Bottom Origin -> Destination Bar -->
+                <div class="relative z-10 grid grid-cols-2 gap-2 text-[11px] pt-3 border-t border-slate-900 bg-slate-900/80 p-2.5 rounded-xl border border-slate-800/80">
+                  <div class="space-y-0.5">
+                    <div class="text-slate-500 font-medium text-[10px] uppercase">Origin</div>
+                    <div class="text-slate-300 font-semibold truncate">${item.sender.address}</div>
+                  </div>
+                  <div class="space-y-0.5 text-right">
+                    <div class="text-slate-500 font-medium text-[10px] uppercase">Destination</div>
+                    <div class="text-slate-300 font-semibold truncate">${item.recipient.address}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- History Audit Log Column -->
+              <div class="bg-slate-950 rounded-2xl border border-slate-800 p-4 space-y-3">
+                <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Checkpoint History</span>
+                  <i class="ph-bold ph-list-numbers text-slate-500"></i>
+                </h4>
+
+                <div class="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+                  ${item.history.slice().reverse().map(h => `
+                    <div class="border-l-2 border-brand-500/40 pl-3 py-1 space-y-0.5">
+                      <div class="flex items-center justify-between text-[11px]">
+                        <span class="font-bold text-slate-200">${h.status}</span>
+                        <span class="text-[10px] text-slate-500">${formatDate(h.timestamp)}</span>
+                      </div>
+                      <div class="text-[11px] text-slate-400">${h.location}</div>
+                      ${h.note ? `<div class="text-[10px] text-slate-500 italic">${h.note}</div>` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    }
+
+    function renderCustomerHistory() {
+      const container = document.getElementById('cust-history-table-container');
+      const search = (document.getElementById('cust-history-search')?.value || '').toLowerCase();
+
+      const filtered = state.shipments.filter(s => 
+        s.id.toLowerCase().includes(search) || 
+        s.recipient.name.toLowerCase().includes(search) ||
+        s.sender.name.toLowerCase().includes(search)
+      );
+
+      if(filtered.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-500 glass-card rounded-2xl">No shipments matched your search.</div>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="glass-card rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-900 text-slate-400 font-medium uppercase tracking-wider text-[10px] border-b border-slate-800">
+                <tr>
+                  <th class="p-4">Tracking ID</th>
+                  <th class="p-4">Recipient</th>
+                  <th class="p-4">Speed & Weight</th>
+                  <th class="p-4">Cost</th>
+                  <th class="p-4">Status</th>
+                  <th class="p-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+                ${filtered.map(s => `
+                  <tr class="hover:bg-slate-800/40 transition-all">
+                    <td class="p-4 font-bold text-white font-mono">${s.id}</td>
+                    <td class="p-4">
+                      <div class="font-medium text-slate-200">${s.recipient.name}</div>
+                      <div class="text-[10px] text-slate-500 truncate max-w-[180px]">${s.recipient.address}</div>
+                    </td>
+                    <td class="p-4">
+                      <div>${s.serviceLevel}</div>
+                      <div class="text-[10px] text-slate-500">${s.weightKg} kg (${s.dimensions})</div>
+                    </td>
+                    <td class="p-4 font-bold text-brand-400">$${s.cost.toFixed(2)}</td>
+                    <td class="p-4">
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass(s.status)}">
+                        ${s.status}
+                      </span>
+                    </td>
+                    <td class="p-4 text-right space-x-2">
+                      <button onclick="selectedTrackingId='${s.id}'; setCustomerTab('tracking')" class="px-2.5 py-1 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 rounded-lg text-[11px] font-semibold border border-brand-500/30">
+                        Track
+                      </button>
+                      <button onclick="openInvoiceModal('${s.id}')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px]">
+                        Invoice
+                      </button>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function calculateRate() {
+      const weight = parseFloat(document.getElementById('ship-weight').value) || 1;
+      const speed = document.getElementById('ship-speed').value;
+      const fragile = document.getElementById('ship-fragile')?.checked;
+
+      let base = 15.00;
+      base += weight * 3.50;
+      if(speed === 'Express') base += 12.00;
+      if(speed === 'Same-day Priority') base += 28.00;
+      if(fragile) base += 5.00;
+
+      document.getElementById('estimated-cost-display').innerText = `$${base.toFixed(2)}`;
+    }
+
+    function handleCreateShipment(e) {
+      e.preventDefault();
+      const newId = generateTrackingId();
+      const weight = parseFloat(document.getElementById('ship-weight').value) || 2.0;
+      const speed = document.getElementById('ship-speed').value;
+      const fragile = document.getElementById('ship-fragile').checked;
+
+      let cost = 15.00 + (weight * 3.50);
+      if(speed === 'Express') cost += 12.00;
+      if(speed === 'Same-day Priority') cost += 28.00;
+      if(fragile) cost += 5.00;
+
+      const newShipment = {
+        id: newId,
+        sender: {
+          name: document.getElementById('ship-sender-name').value,
+          company: document.getElementById('ship-sender-comp').value || 'N/A',
+          phone: '+1 (555) 019-2831',
+          address: document.getElementById('ship-sender-addr').value
+        },
+        recipient: {
+          name: document.getElementById('ship-recip-name').value,
+          company: document.getElementById('ship-recip-comp').value || 'N/A',
+          phone: '+1 (555) 999-0000',
+          address: document.getElementById('ship-recip-addr').value
+        },
+        weightKg: weight,
+        dimensions: document.getElementById('ship-dim').value,
+        serviceLevel: speed,
+        fragile: fragile,
+        cost: cost,
+        status: 'Order Placed',
+        assignedDriverId: 'drv_1',
+        createdAt: new Date().toISOString(),
+        estimatedDelivery: new Date(Date.now() + 86400000 * 2).toISOString(),
+        currentLocation: 'Origin Pickup Station',
+        checkpointIndex: 0,
+        history: [
+          { status: 'Order Placed', timestamp: new Date().toISOString(), location: 'Origin Hub', note: 'Shipment created by customer' }
+        ],
+        notes: fragile ? 'Fragile item requested.' : ''
+      };
+
+      state.shipments.unshift(newShipment);
+      saveState();
+
+      selectedTrackingId = newId;
+      setCustomerTab('tracking');
+      alertModal(`Shipment created successfully! Tracking ID: ${newId}`);
+    }
+
+    // --- DELIVERY PERSONNEL LOGIC ---
+    let currentDriverId = 'drv_1';
+
+    function switchDriverContext(drvId) {
+      currentDriverId = drvId;
+      renderDriverView();
+    }
+
+    function renderDriverView() {
+      // Driver Selector Options
+      const sel = document.getElementById('active-driver-select');
+      sel.innerHTML = state.drivers.map(d => `
+        <option value="${d.id}" ${d.id === currentDriverId ? 'selected' : ''}>${d.name} (${d.vehicle})</option>
+      `).join('');
+
+      const activeDriver = state.drivers.find(d => d.id === currentDriverId) || state.drivers[0];
+      document.getElementById('driver-app-name-display').innerText = activeDriver.name;
+
+      // Filter assigned shipments
+      const assigned = state.shipments.filter(s => s.assignedDriverId === currentDriverId && s.status !== 'Delivered');
+
+      document.getElementById('driver-task-count').innerText = `${assigned.length} pending deliveries`;
+
+      const listContainer = document.getElementById('driver-shipments-list');
+      if(assigned.length === 0) {
+        listContainer.innerHTML = `
+          <div class="glass-card rounded-2xl p-8 text-center text-slate-400 space-y-2">
+            <i class="ph-bold ph-check-circle text-4xl text-emerald-400"></i>
+            <div class="font-bold text-slate-200">All deliveries completed!</div>
+            <p class="text-xs">No active packages currently assigned to your route.</p>
+          </div>
+        `;
+      } else {
+        listContainer.innerHTML = assigned.map(s => `
+          <div class="glass-card glass-card-hover rounded-2xl p-5 border border-slate-800 space-y-4 transition-all">
+            <div class="flex items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-white font-mono text-base">${s.id}</span>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadgeClass(s.status)}">
+                  ${s.status}
+                </span>
+                ${s.fragile ? '<span class="text-[10px] bg-rose-500/10 text-rose-400 border border-rose-500/30 px-2 py-0.5 rounded">Fragile</span>' : ''}
+              </div>
+              <span class="text-xs text-brand-400 font-semibold">${s.serviceLevel}</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div class="space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <span class="text-[10px] text-slate-500 uppercase font-semibold">Pickup From</span>
+                <div class="font-bold text-slate-200">${s.sender.name}</div>
+                <div class="text-slate-400 text-[11px]">${s.sender.address}</div>
+              </div>
+
+              <div class="space-y-1 bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <span class="text-[10px] text-slate-500 uppercase font-semibold">Deliver To</span>
+                <div class="font-bold text-slate-200">${s.recipient.name}</div>
+                <div class="text-slate-400 text-[11px]">${s.recipient.address}</div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <span class="text-xs text-slate-400">Weight: <strong class="text-slate-200">${s.weightKg} kg</strong></span>
+              
+              <button onclick="openStatusModal('${s.id}')" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-semibold text-xs rounded-xl shadow-md shadow-brand-500/20 flex items-center gap-1.5">
+                <i class="ph-bold ph-[pencil-simple]"></i> Update Delivery Status
+              </button>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Route Checklist
+      const routeBox = document.getElementById('driver-route-checklist');
+      routeBox.innerHTML = assigned.map((s, idx) => `
+        <div class="flex items-center gap-3 p-2.5 bg-slate-950 rounded-xl border border-slate-800">
+          <div class="w-6 h-6 rounded-full bg-slate-800 text-slate-300 font-bold flex items-center justify-center text-[10px]">
+            ${idx + 1}
+          </div>
+          <div class="flex-1 truncate">
+            <div class="font-bold text-slate-200 truncate">${s.recipient.name}</div>
+            <div class="text-[10px] text-slate-400 truncate">${s.recipient.address}</div>
+          </div>
+          <span class="text-[10px] font-mono text-brand-400">${s.id}</span>
+        </div>
+      `).join('');
+    }
+
+    // Modal Operations
+    function openStatusModal(shipmentId) {
+      const item = state.shipments.find(s => s.id === shipmentId);
+      if(!item) return;
+
+      document.getElementById('modal-shipment-id').value = item.id;
+      document.getElementById('modal-status-select').value = item.status;
+      document.getElementById('modal-location-input').value = item.currentLocation;
+      document.getElementById('modal-notes-input').value = '';
+
+      document.getElementById('modal-update-status').classList.remove('hidden');
+    }
+
+    function closeStatusModal() {
+      document.getElementById('modal-update-status').classList.add('hidden');
+    }
+
+    function saveStatusUpdate(e) {
+      e.preventDefault();
+      const id = document.getElementById('modal-shipment-id').value;
+      const status = document.getElementById('modal-status-select').value;
+      const loc = document.getElementById('modal-location-input').value;
+      const note = document.getElementById('modal-notes-input').value;
+      const otp = document.getElementById('modal-otp-input').value;
+      const signedBy = document.getElementById('modal-signedby-input').value;
+
+      const item = state.shipments.find(s => s.id === id);
+      if(item) {
+        item.status = status;
+        item.currentLocation = loc;
+
+        // Stage index update
+        const idx = STATUS_STAGES.indexOf(status);
+        if(idx !== -1) item.checkpointIndex = idx;
+
+        if(status === 'Delivered') {
+          item.proofOfDelivery = {
+            otp: otp || '4092',
+            signedBy: signedBy || item.recipient.name,
+            notes: note
+          };
+        }
+
+        item.history.push({
+          status: status,
+          timestamp: new Date().toISOString(),
+          location: loc,
+          note: note || `Status updated to ${status}`
+        });
+
+        saveState();
+        closeStatusModal();
+        renderApp();
+        alertModal(`Status updated successfully for ${id}`);
+      }
+    }
+
+    // --- ADMINISTRATOR LOGIC ---
+    function renderAdminView() {
+      // 1. Calculate KPIs
+      const total = state.shipments.length;
+      const inTransit = state.shipments.filter(s => s.status === 'In Transit' || s.status === 'Out for Delivery').length;
+      const delivered = state.shipments.filter(s => s.status === 'Delivered').length;
+      const totalRevenue = state.shipments.reduce((acc, s) => acc + s.cost, 0);
+
+      document.getElementById('admin-kpi-container').innerHTML = `
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center text-2xl">
+            <i class="ph-bold ph-package"></i>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Shipments</div>
+            <div class="text-2xl font-black text-white mt-0.5">${total}</div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-400 border border-brand-500/20 flex items-center justify-center text-2xl">
+            <i class="ph-bold ph-truck"></i>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Active In-Transit</div>
+            <div class="text-2xl font-black text-white mt-0.5">${inTransit}</div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center text-2xl">
+            <i class="ph-bold ph-check-circle"></i>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">On-Time Rate</div>
+            <div class="text-2xl font-black text-white mt-0.5">98.4%</div>
+          </div>
+        </div>
+
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center text-2xl">
+            <i class="ph-bold ph-currency-dollar"></i>
+          </div>
+          <div>
+            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Total Booking Revenue</div>
+            <div class="text-2xl font-black text-white mt-0.5">$${totalRevenue.toFixed(2)}</div>
+          </div>
+        </div>
+      `;
+
+      // 2. Driver Roster
+      document.getElementById('admin-driver-roster').innerHTML = state.drivers.map(d => {
+        const assignedCount = state.shipments.filter(s => s.assignedDriverId === d.id && s.status !== 'Delivered').length;
+        return `
+          <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <div class="font-bold text-xs text-slate-200">${d.name}</div>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${d.vehicle}</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>Rating: <strong class="text-amber-400">${d.rating} ★</strong></span>
+              <span>Active Loads: <strong class="text-brand-400">${assignedCount}</strong></span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 3. Admin Master Table
+      renderAdminMasterTable();
+    }
+
+    function renderAdminMasterTable() {
+      const filterStatus = document.getElementById('admin-filter-status')?.value || 'ALL';
+      const container = document.getElementById('admin-master-table-container');
+
+      const filtered = state.shipments.filter(s => filterStatus === 'ALL' || s.status === filterStatus);
+
+      container.innerHTML = `
+        <table class="w-full text-left text-xs text-slate-300">
+          <thead class="bg-slate-900 text-slate-400 font-medium uppercase tracking-wider text-[10px] border-b border-slate-800">
+            <tr>
+              <th class="p-3">ID</th>
+              <th class="p-3">Route (Origin -> Dest)</th>
+              <th class="p-3">Assigned Driver</th>
+              <th class="p-3">Status</th>
+              <th class="p-3 text-right">Reassign Driver</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60">
+            ${filtered.map(s => `
+              <tr class="hover:bg-slate-800/40 transition-all">
+                <td class="p-3 font-bold font-mono text-white">${s.id}</td>
+                <td class="p-3">
+                  <div class="text-slate-200 truncate max-w-[200px]">${s.sender.address}</div>
+                  <div class="text-[10px] text-slate-500 truncate max-w-[200px]">➡️ ${s.recipient.address}</div>
+                </td>
+                <td class="p-3">
+                  <span class="text-slate-200 font-medium">
+                    ${state.drivers.find(d => d.id === s.assignedDriverId)?.name || 'Unassigned'}
+                  </span>
+                </td>
+                <td class="p-3">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass(s.status)}">
+                    ${s.status}
+                  </span>
+                </td>
+                <td class="p-3 text-right">
+                  <select onchange="reassignDriver('${s.id}', this.value)" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 focus:outline-none">
+                    ${state.drivers.map(d => `
+                      <option value="${d.id}" ${d.id === s.assignedDriverId ? 'selected' : ''}>${d.name}</option>
+                    `).join('')}
+                  </select>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function reassignDriver(shipmentId, newDriverId) {
+      const item = state.shipments.find(s => s.id === shipmentId);
+      if(item) {
+        item.assignedDriverId = newDriverId;
+        saveState();
+        renderAdminView();
+      }
+    }
+
+    function openAddDriverModal() {
+      const name = prompt("Enter new courier agent name:");
+      if(!name) return;
+      const vehicle = prompt("Enter vehicle model/type (e.g. Van #501):") || 'Cargo Van';
+      const newDriver = {
+        id: 'drv_' + (state.drivers.length + 1),
+        name: name,
+        phone: '+1 (555) 000-1111',
+        vehicle: vehicle,
+        rating: 5.0,
+        activeDeliveries: 0,
+        status: 'Active'
+      };
+      state.drivers.push(newDriver);
+      saveState();
+      renderApp();
+    }
+
+    // --- DOWNLOADABLE INVOICE RECEIPT MODAL ---
+    function openInvoiceModal(shipmentId) {
+      const s = state.shipments.find(item => item.id === shipmentId);
+      if(!s) return;
+
+      const modalContent = document.getElementById('invoice-modal-content');
+      modalContent.innerHTML = `
+        <div class="space-y-4 border-b border-slate-800 pb-4">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="text-xl font-black text-brand-500 tracking-tight">ShipTrack Receipt</div>
+              <div class="text-xs text-slate-400">Official Logistics Waybill Summary</div>
+            </div>
+            <div class="text-right">
+              <div class="font-mono text-sm font-bold text-white">${s.id}</div>
+              <div class="text-[10px] text-slate-500">${formatDate(s.createdAt)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-xs">
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+            <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Sender</div>
+            <div class="font-bold text-slate-200">${s.sender.name}</div>
+            <div class="text-slate-400 text-[11px]">${s.sender.address}</div>
+          </div>
+
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+            <div class="text-[10px] text-slate-500 font-bold uppercase mb-1">Consignee</div>
+            <div class="font-bold text-slate-200">${s.recipient.name}</div>
+            <div class="text-slate-400 text-[11px]">${s.recipient.address}</div>
+          </div>
+        </div>
+
+        <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 text-xs">
+          <div class="flex justify-between">
+            <span class="text-slate-400">Service Tier</span>
+            <span class="font-semibold text-slate-200">${s.serviceLevel}</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-400">Parcel Metrics</span>
+            <span class="font-semibold text-slate-200">${s.weightKg} kg (${s.dimensions})</span>
+          </div>
+          <div class="flex justify-between border-t border-slate-800/80 pt-2 text-sm font-bold">
+            <span class="text-slate-200">Total Charged</span>
+            <span class="text-brand-400">$${s.cost.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('modal-invoice').classList.remove('hidden');
+    }
+
+    function closeInvoiceModal() {
+      document.getElementById('modal-invoice').classList.add('hidden');
+    }
+
+    function simulatePrintInvoice() {
+      window.print();
+    }
+
+    function alertModal(msg) {
+      alert(msg);
+    }
+
+    // --- GEMINI AI ASSISTANT LOGIC ---
+    let aiChatOpen = false;
+
+    function toggleAIChat() {
+      aiChatOpen = !aiChatOpen;
+      const win = document.getElementById('ai-chat-window');
+      if(aiChatOpen) {
+        win.classList.remove('hidden');
+      } else {
+        win.classList.add('hidden');
+      }
+    }
+
+    function askAIQuick(text) {
+      document.getElementById('ai-input-text').value = text;
+      handleAISubmit(new Event('submit'));
+    }
+
+    async function handleAISubmit(e) {
+      if(e) e.preventDefault();
+      const inputEl = document.getElementById('ai-input-text');
+      const userQuery = inputEl.value.trim();
+      if(!userQuery) return;
+
+      inputEl.value = '';
+      appendAIMessage('user', userQuery);
+
+      // Loading Indicator
+      const loadingId = appendAILoading();
+
+      try {
+        // Prepare context data for Gemini
+        const systemPrompt = `You are ShipTrack AI, an intelligent logistics virtual assistant embedded inside the ShipTrack Logistics Management Platform.
+Use the following live application state to answer user queries accurately and concisely:
+Current Shipments State JSON: ${JSON.stringify(state.shipments)}
+Current Delivery Personnel State JSON: ${JSON.stringify(state.drivers)}
+
+Guidelines:
+- Provide friendly, clear, and direct answers regarding shipment locations, estimated delivery times, rates, and driver allocations.
+- If asking about a tracking ID, cite the recipient, status, and current GPS location.
+- Keep responses compact (under 3-4 sentences).`;
+
+        const apiKey = ""; // API key passed via runtime canvas
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+        const payload = {
+          contents: [{ parts: [{ text: userQuery }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] }
+        };
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+        removeAILoading(loadingId);
+
+        const aiText = result?.candidates?.[0]?.content?.parts?.[0]?.text || generateFallbackAIResponse(userQuery);
+        appendAIMessage('assistant', aiText);
+
+      } catch (err) {
+        removeAILoading(loadingId);
+        // Fallback simulation if network or API key is not present
+        const fallbackText = generateFallbackAIResponse(userQuery);
+        appendAIMessage('assistant', fallbackText);
+      }
+    }
+
+    function generateFallbackAIResponse(query) {
+      const q = query.toLowerCase();
+      if(q.includes('st-984210')) {
+        return "Shipment ST-984210 (Apex Tech -> Cyberdyne) is currently In Transit at Denver Sorting Facility, CO. Estimated delivery is Oct 6.";
+      } else if(q.includes('st-882194')) {
+        return "Shipment ST-882194 is currently Out for Delivery with driver Marcus Vance in Springfield Sector 4!";
+      } else if(q.includes('fleet') || q.includes('deliveries')) {
+        const activeCount = state.shipments.filter(s => s.status !== 'Delivered').length;
+        return `We currently have ${activeCount} active shipment(s) in transit across 3 registered delivery drivers.`;
+      } else {
+        return "I am connected to the live ShipTrack database! You can track any ID like ST-984210, ST-882194, or ST-773012.";
+      }
+    }
+
+    function appendAIMessage(role, text) {
+      const container = document.getElementById('ai-chat-messages');
+      const msgDiv = document.createElement('div');
+      
+      if(role === 'user') {
+        msgDiv.className = 'flex justify-end';
+        msgDiv.innerHTML = `
+          <div class="bg-brand-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[85%] leading-relaxed">
+            ${text}
+          </div>
+        `;
+      } else {
+        msgDiv.className = 'flex gap-2.5';
+        msgDiv.innerHTML = `
+          <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center flex-shrink-0 text-xs">
+            <i class="ph-bold ph-robot"></i>
+          </div>
+          <div class="bg-slate-800/80 p-3 rounded-2xl rounded-tl-none border border-slate-700 text-slate-200 leading-relaxed max-w-[85%]">
+            ${text}
+          </div>
+        `;
+      }
+
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function appendAILoading() {
+      const id = 'ai-load-' + Date.now();
+      const container = document.getElementById('ai-chat-messages');
+      const msgDiv = document.createElement('div');
+      msgDiv.id = id;
+      msgDiv.className = 'flex gap-2.5';
+      msgDiv.innerHTML = `
+        <div class="w-6 h-6 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center flex-shrink-0 text-xs">
+          <i class="ph-bold ph-robot"></i>
+        </div>
+        <div class="bg-slate-800/80 p-3 rounded-2xl rounded-tl-none border border-slate-700 text-slate-400 text-xs flex items-center gap-1.5">
+          <i class="ph-bold ph-spinner animate-spin"></i> Analyzing logistics network...
+        </div>
+      `;
+      container.appendChild(msgDiv);
+      container.scrollTop = container.scrollHeight;
+      return id;
+    }
+
+    function removeAILoading(id) {
+      const el = document.getElementById(id);
+      if(el) el.remove();
+    }
+
+    // --- INITIALIZATION ON LOAD ---
+    window.onload = function() {
+      renderApp();
+      calculateRate();
+    };
+  </script>
+</body>
+</html>
